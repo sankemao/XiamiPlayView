@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="XiamiPlayLayout">
+        <attr name="header_view" format="reference"/>
+        <attr name="target_view" format="reference"/>
+        <attr name="hover_view" format="reference"/>
+        <attr name="header_init_offset" format="dimension"/>
+        <attr name="target_end_offset" format="dimension"/>
+        <attr name="target_init_offset" format="dimension"/>
+    </declare-styleable>
+</resources>
