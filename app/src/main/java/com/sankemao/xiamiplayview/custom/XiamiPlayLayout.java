@@ -95,7 +95,6 @@ public class XiamiPlayLayout extends ViewGroup {
 
     @Override
     protected void onFinishInflate() {
-        Log.i(">>>>>", "onFinishInflate");
         super.onFinishInflate();
         if (mHeaderViewId != 0) {
             mHeaderView = findViewById(mHeaderViewId);
@@ -139,7 +138,6 @@ public class XiamiPlayLayout extends ViewGroup {
      */
     @Override
     protected int getChildDrawingOrder(int childCount, int i) {
-        Log.i(">>>>>", "getChildDrawingOrder");
         ensureHeaderViewAndScrollView();
         int hoverIndex = indexOfChild(mHoverView);
         int headerIndex = indexOfChild(mHeaderView);
@@ -159,17 +157,18 @@ public class XiamiPlayLayout extends ViewGroup {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        Log.i(">>>>>", "onMeasure");
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         ensureHeaderViewAndScrollView();
-        measureChild(mTargetView, widthMeasureSpec, heightMeasureSpec);
+        final int resizeHeightMeasureSpec = MeasureSpec.makeMeasureSpec(
+                MeasureSpec.getSize(heightMeasureSpec) - mTargetEndOffset,
+                MeasureSpec.getMode(heightMeasureSpec));
+        measureChild(mTargetView, widthMeasureSpec, resizeHeightMeasureSpec);
         measureChild(mHeaderView, widthMeasureSpec, heightMeasureSpec);
         measureChild(mHoverView, widthMeasureSpec, heightMeasureSpec);
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        Log.i(">>>>>", "onLayout");
         final int width = getMeasuredWidth();
         final int height = getMeasuredHeight();
         if (getChildCount() == 0) {
@@ -205,12 +204,7 @@ public class XiamiPlayLayout extends ViewGroup {
         final int action = MotionEventCompat.getActionMasked(ev);
         int pointerIndex;
 
-        //当listView可以向上滚动时（下拉），不拦截事件
-        if (!isEnabled() || mTarget.canChildScrollUp()) {
-            Log.d(TAG, "fast end onIntercept: isEnabled = " + isEnabled() + "; canChildScrollUp = "
-                    + mTarget.canChildScrollUp());
-            return false;
-        }
+        if(!isEnabled()) return false;
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 //记录当前活动的pointerId
@@ -242,7 +236,7 @@ public class XiamiPlayLayout extends ViewGroup {
                 }
                 break;
 
-            case MotionEventCompat.ACTION_POINTER_UP:
+            case MotionEvent.ACTION_POINTER_UP:
                 //多指
                 onSecondaryPointerUp(ev);
                 break;
@@ -254,7 +248,6 @@ public class XiamiPlayLayout extends ViewGroup {
                 mActivePointerId = INVALID_POINTER;
                 break;
         }
-
         return mIsDragging;
     }
 
@@ -273,12 +266,8 @@ public class XiamiPlayLayout extends ViewGroup {
     public boolean onTouchEvent(MotionEvent ev) {
         final int action = MotionEventCompat.getActionMasked(ev);
         int pointerIndex;
-        //target可以下拉，自身不处理，其实无所谓。
-        if (!isEnabled() || mTarget.canChildScrollUp()) {
-            Log.d(TAG, "fast end onTouchEvent: isEnabled = " + isEnabled() + "; canChildScrollUp = "
-                    + mTarget.canChildScrollUp());
-            return false;
-        }
+
+        if(!isEnabled()) return false;
 
         //初始化速度追踪器
         acquireVelocityTracker(ev);
@@ -287,8 +276,6 @@ public class XiamiPlayLayout extends ViewGroup {
             case MotionEvent.ACTION_DOWN:
                 //获取活动的pointerId
                 mActivePointerId = ev.getPointerId(0);
-                //状态重置
-                mIsDragging = false;
                 break;
 
             case MotionEvent.ACTION_MOVE: {
@@ -298,8 +285,6 @@ public class XiamiPlayLayout extends ViewGroup {
                     return false;
                 }
                 final float y = ev.getY(pointerIndex);
-                //判断如果下拉，或target偏移量大于0。
-                startDragging(y);
                 //自身开始targetView的拖动，非targetView中列表
                 if (mIsDragging) {
                     float dy = y - mLastMotionY;
@@ -340,7 +325,7 @@ public class XiamiPlayLayout extends ViewGroup {
                 break;
             }
 
-            case MotionEventCompat.ACTION_POINTER_UP:
+            case MotionEvent.ACTION_POINTER_UP:
                 onSecondaryPointerUp(ev);
                 break;
 
@@ -412,16 +397,17 @@ public class XiamiPlayLayout extends ViewGroup {
     }
 
     private void startDragging(float y) {
-        //1，下拉靠第一个条件判断；2，或者target偏移量大于0(上拉是靠第二个条件判断)；
-        if (y > mInitialDownY || mTargetCurrentOffset > mTargetEndOffset) {
-            final float yDiff = Math.abs(y - mInitialDownY);
-            if (yDiff > mTouchSlop && !mIsDragging) {
-                //初始移动的坐标
-                mInitialMotionY = y;
-                Log.e("startDragging: ", mInitialMotionY + " ");
-                mLastMotionY = mInitialMotionY;
-                mIsDragging = true;
-            }
+        //下拉，上拉
+        if ((y > mInitialDownY && !mTarget.canChildScrollUp()) ||
+                (y < mInitialDownY && mTargetCurrentOffset > mTargetEndOffset)) {
+                final float yDiff = Math.abs(y - mInitialDownY);
+                if (yDiff > mTouchSlop && !mIsDragging) {
+                    //初始移动的坐标
+                    mInitialMotionY = y;
+                    Log.e("startDragging: ", mInitialMotionY + " ");
+                    mLastMotionY = mInitialMotionY;
+                    mIsDragging = true;
+                }
         }
     }
 
